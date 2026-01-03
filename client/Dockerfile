@@ -1,11 +1,14 @@
-FROM maven:3.8.4-openjdk-17 AS builder
+# Stage 1: Build using a maintained Maven image
+FROM maven:3.9.6-eclipse-temurin-17-alpine AS builder
 WORKDIR /app
+COPY ./pom.xml ./
 COPY ./src ./src
-COPY ./pom.xml .
 RUN mvn clean package -DskipTests
 
-FROM openjdk:17-jdk-alpine
-VOLUME /tmp
-ARG JAR_FILE=target/*.jar
-COPY ${JAR_FILE} client-service.jar
-ENTRYPOINT ["java","-jar","/client-service.jar"]
+# Stage 2: Runtime using a maintained JRE image
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+# Copy the JAR from the builder stage
+COPY --from=builder /app/target/*.jar app.jar
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
